@@ -1,0 +1,32 @@
+{
+  "name": "learning-discord-bot",
+  "version": "1.0.0",
+  "description": "A Discord bot designed for developers to enhance their learning experience",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js",
+    "build": "echo 'No build step required'"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "learning",
+    "coding",
+    "developer"
+  ],
+  "author": "Samudra",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "@discordjs/rest": "^2.2.0",
+    "discord-api-types": "^0.37.61",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
