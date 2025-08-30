@@ -213,6 +213,160 @@ async function registerSlashCommands() {
                 subcommand
                     .setName('stats')
                     .setDescription('View your challenge statistics')),
+
+        // GitHub Integration
+        new SlashCommandBuilder()
+            .setName('github')
+            .setDescription('GitHub integration commands')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('track')
+                    .setDescription('Track a GitHub repository')
+                    .addStringOption(option =>
+                        option.setName('repo')
+                            .setDescription('Repository URL or username/repo')
+                            .setRequired(true)))
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('commits')
+                    .setDescription('Show recent commits from tracked repos'))
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('list')
+                    .setDescription('List tracked repositories')),
+
+        // Code Review System
+        new SlashCommandBuilder()
+            .setName('review')
+            .setDescription('Code review system')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('submit')
+                    .setDescription('Submit code for review')
+                    .addStringOption(option =>
+                        option.setName('title')
+                            .setDescription('Review title')
+                            .setRequired(true))
+                    .addStringOption(option =>
+                        option.setName('code')
+                            .setDescription('Code to review')
+                            .setRequired(true))
+                    .addStringOption(option =>
+                        option.setName('language')
+                            .setDescription('Programming language')
+                            .setRequired(true))
+                    .addStringOption(option =>
+                        option.setName('description')
+                            .setDescription('What you want feedback on')
+                            .setRequired(false)))
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('list')
+                    .setDescription('List pending code reviews'))
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('feedback')
+                    .setDescription('Give feedback on a code review')
+                    .addIntegerOption(option =>
+                        option.setName('id')
+                            .setDescription('Review ID')
+                            .setRequired(true))
+                    .addStringOption(option =>
+                        option.setName('feedback')
+                            .setDescription('Your feedback')
+                            .setRequired(true))),
+
+        // Learning Resources
+        new SlashCommandBuilder()
+            .setName('learn')
+            .setDescription('Learning resources and recommendations')
+            .addStringOption(option =>
+                option.setName('topic')
+                    .setDescription('What do you want to learn?')
+                    .addChoices(
+                        { name: 'JavaScript', value: 'javascript' },
+                        { name: 'React', value: 'react' },
+                        { name: 'Node.js', value: 'nodejs' },
+                        { name: 'Python', value: 'python' },
+                        { name: 'Data Structures', value: 'datastructures' },
+                        { name: 'Algorithms', value: 'algorithms' },
+                        { name: 'System Design', value: 'systemdesign' },
+                        { name: 'DevOps', value: 'devops' }
+                    )
+                    .setRequired(true)),
+
+        // Progress Tracking
+        new SlashCommandBuilder()
+            .setName('progress')
+            .setDescription('Track your learning progress')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('log')
+                    .setDescription('Log a learning session')
+                    .addStringOption(option =>
+                        option.setName('topic')
+                            .setDescription('What did you learn/work on?')
+                            .setRequired(true))
+                    .addIntegerOption(option =>
+                        option.setName('hours')
+                            .setDescription('How many hours?')
+                            .setRequired(true))
+                    .addStringOption(option =>
+                        option.setName('notes')
+                            .setDescription('Any notes or key takeaways?')
+                            .setRequired(false)))
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('stats')
+                    .setDescription('View your learning statistics'))
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('week')
+                    .setDescription('View this week\'s progress')),
+
+        // Interview Prep
+        new SlashCommandBuilder()
+            .setName('interview')
+            .setDescription('Interview preparation tools')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('question')
+                    .setDescription('Get a random interview question')
+                    .addStringOption(option =>
+                        option.setName('type')
+                            .setDescription('Type of question')
+                            .addChoices(
+                                { name: 'Technical', value: 'technical' },
+                                { name: 'Behavioral', value: 'behavioral' },
+                                { name: 'System Design', value: 'system' },
+                                { name: 'Coding', value: 'coding' }
+                            )))
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('mock')
+                    .setDescription('Start a mock interview session')),
+
+        // Code Formatter
+        new SlashCommandBuilder()
+            .setName('format')
+            .setDescription('Format code snippets')
+            .addStringOption(option =>
+                option.setName('code')
+                    .setDescription('Code to format')
+                    .setRequired(true))
+            .addStringOption(option =>
+                option.setName('language')
+                    .setDescription('Programming language')
+                    .addChoices(
+                        { name: 'JavaScript', value: 'javascript' },
+                        { name: 'Python', value: 'python' },
+                        { name: 'Java', value: 'java' },
+                        { name: 'C++', value: 'cpp' },
+                        { name: 'HTML', value: 'html' },
+                        { name: 'CSS', value: 'css' },
+                        { name: 'SQL', value: 'sql' }
+                    )
+                    .setRequired(true))
     ];
 
     try {
@@ -255,6 +409,18 @@ client.on('interactionCreate', async interaction => {
             await handleChallengeCompleteCommand(interaction);
         } else if (commandName === 'my-challenges') {
             await handleMyChallengesCommand(interaction);
+        } else if (commandName === 'github') {
+            await handleGitHubCommand(interaction);
+        } else if (commandName === 'review') {
+            await handleReviewCommand(interaction);
+        } else if (commandName === 'learn') {
+            await handleLearnCommand(interaction);
+        } else if (commandName === 'interview') {
+            await handleInterviewCommand(interaction);
+        } else if (commandName === 'progress') {
+            await handleProgressCommand(interaction);
+        } else if (commandName === 'format') {
+            await handleFormatCommand(interaction);
         }
     } catch (error) {
         console.error(error);
@@ -714,6 +880,395 @@ async function sendDailyReminder() {
             channel.send({ embeds: [embed] });
         }
     });
+}
+
+// GitHub command handler
+async function handleGitHubCommand(interaction) {
+    const subcommand = interaction.options.getSubcommand();
+    const userId = interaction.user.id;
+
+    if (subcommand === 'track') {
+        const repo = interaction.options.getString('repo');
+        let repoName = repo;
+
+        // Extract repo name from URL if provided
+        if (repo.includes('github.com')) {
+            const match = repo.match(/github\.com\/([^\/]+\/[^\/]+)/);
+            repoName = match ? match[1] : repo;
+        }
+
+        const repoKey = `${userId}_${repoName}`;
+        client.githubRepos.set(repoKey, {
+            name: repoName,
+            url: `https://github.com/${repoName}`,
+            trackedBy: userId,
+            addedAt: new Date().toISOString()
+        });
+
+        saveData();
+
+        const embed = new EmbedBuilder()
+            .setColor('#24292e')
+            .setTitle('📂 Repository Tracked!')
+            .setDescription(`Now tracking: **${repoName}**`)
+            .addFields(
+                { name: 'Repository', value: `[${repoName}](https://github.com/${repoName})` }
+            )
+            .setFooter({ text: 'Use /github commits to see recent activity' });
+
+        await interaction.reply({ embeds: [embed] });
+
+    } else if (subcommand === 'list') {
+        const userRepos = [...client.githubRepos.entries()]
+            .filter(([key, repo]) => repo.trackedBy === userId)
+            .map(([key, repo]) => repo);
+
+        if (userRepos.length === 0) {
+            await interaction.reply({ content: '📂 You\'re not tracking any repositories yet!', ephemeral: true });
+            return;
+        }
+
+        const embed = new EmbedBuilder()
+            .setColor('#24292e')
+            .setTitle('📂 Your Tracked Repositories')
+            .setDescription(userRepos.map(r => `[${r.name}](${r.url})`).join('\n'));
+
+        await interaction.reply({ embeds: [embed] });
+    }
+    // Note: For real commits, you'd need GitHub API integration
+}
+
+// Code Review command handler
+async function handleReviewCommand(interaction) {
+    const subcommand = interaction.options.getSubcommand();
+    const userId = interaction.user.id;
+
+    if (subcommand === 'submit') {
+        const title = interaction.options.getString('title');
+        const code = interaction.options.getString('code');
+        const language = interaction.options.getString('language');
+        const description = interaction.options.getString('description') || 'No specific feedback requested';
+
+        const reviewId = Date.now(); // Simple ID generation
+        client.codeReviews.set(reviewId.toString(), {
+            id: reviewId,
+            title,
+            code,
+            language,
+            description,
+            author: userId,
+            authorName: interaction.user.username,
+            feedback: [],
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        });
+
+        saveData();
+
+        const embed = new EmbedBuilder()
+            .setColor('#ff9800')
+            .setTitle('🔍 Code Review Submitted!')
+            .setDescription(`**${title}** (ID: ${reviewId})`)
+            .addFields(
+                { name: 'Language', value: language, inline: true },
+                { name: 'Status', value: 'Pending Review', inline: true },
+                { name: 'Description', value: description },
+                { name: 'Code', value: `\`\`\`${language}\n${code.substring(0, 1000)}${code.length > 1000 ? '...' : ''}\`\`\`` }
+            )
+            .setFooter({ text: 'Others can now provide feedback using /review feedback' });
+
+        await interaction.reply({ embeds: [embed] });
+
+    } else if (subcommand === 'list') {
+        const pendingReviews = [...client.codeReviews.values()]
+            .filter(review => review.status === 'pending')
+            .slice(0, 10); // Limit to 10 most recent
+
+        if (pendingReviews.length === 0) {
+            await interaction.reply({ content: '🔍 No pending code reviews!', ephemeral: true });
+            return;
+        }
+
+        const embed = new EmbedBuilder()
+            .setColor('#ff9800')
+            .setTitle('🔍 Pending Code Reviews')
+            .setDescription(pendingReviews.map(r =>
+                `**${r.id}**: ${r.title} (${r.language}) - by ${r.authorName}`
+            ).join('\n'))
+            .setFooter({ text: 'Use /review feedback [id] to provide feedback' });
+
+        await interaction.reply({ embeds: [embed] });
+
+    } else if (subcommand === 'feedback') {
+        const reviewId = interaction.options.getInteger('id').toString();
+        const feedback = interaction.options.getString('feedback');
+        const review = client.codeReviews.get(reviewId);
+
+        if (!review) {
+            await interaction.reply({ content: '❌ Review not found!', ephemeral: true });
+            return;
+        }
+
+        review.feedback.push({
+            author: userId,
+            authorName: interaction.user.username,
+            feedback: feedback,
+            timestamp: new Date().toISOString()
+        });
+
+        client.codeReviews.set(reviewId, review);
+        saveData();
+
+        const embed = new EmbedBuilder()
+            .setColor('#4caf50')
+            .setTitle('💬 Feedback Added!')
+            .setDescription(`Feedback added to review: **${review.title}**`)
+            .addFields(
+                { name: 'Your Feedback', value: feedback }
+            );
+
+        await interaction.reply({ embeds: [embed] });
+    }
+}
+
+// Learning Resources command handler
+async function handleLearnCommand(interaction) {
+    const topic = interaction.options.getString('topic');
+
+    const resources = {
+        javascript: {
+            title: 'JavaScript Learning Path',
+            color: '#f7df1e',
+            resources: [
+                '📖 [MDN JavaScript Guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide)',
+                '📚 [JavaScript.info](https://javascript.info/)',
+                '🎥 [JavaScript Crash Course](https://www.youtube.com/watch?v=hdI2bqOjy3c)',
+                '💪 [JavaScript30](https://javascript30.com/)',
+                '🧪 [Codewars JavaScript](https://www.codewars.com/?language=javascript)'
+            ]
+        },
+        react: {
+            title: 'React Learning Path',
+            color: '#61dafb',
+            resources: [
+                '📖 [Official React Docs](https://reactjs.org/docs/getting-started.html)',
+                '🎥 [React Tutorial for Beginners](https://www.youtube.com/watch?v=Ke90Tje7VS0)',
+                '💪 [React Challenges](https://react-challenges.vercel.app/)',
+                '🛠️ [Create React App](https://create-react-app.dev/)',
+                '📚 [React Router](https://reactrouter.com/)'
+            ]
+        },
+        python: {
+            title: 'Python Learning Path',
+            color: '#3776ab',
+            resources: [
+                '📖 [Python.org Tutorial](https://docs.python.org/3/tutorial/)',
+                '📚 [Real Python](https://realpython.com/)',
+                '💪 [HackerRank Python](https://www.hackerrank.com/domains/python)',
+                '🎥 [Python Crash Course](https://www.youtube.com/watch?v=rfscVS0vtbw)',
+                '🧪 [LeetCode Python](https://leetcode.com/problemset/all/?languageTags=python)'
+            ]
+        },
+        algorithms: {
+            title: 'Algorithms & Data Structures',
+            color: '#ff6b6b',
+            resources: [
+                '📖 [Introduction to Algorithms (CLRS)](https://mitpress.mit.edu/books/introduction-algorithms-third-edition)',
+                '🎥 [MIT 6.006 Introduction to Algorithms](https://www.youtube.com/playlist?list=PLUl4u3cNGP61Oq3tWYp6V_F-5jb5L2iHb)',
+                '💪 [LeetCode](https://leetcode.com/)',
+                '📚 [Algorithm Visualizer](https://algorithm-visualizer.org/)',
+                '🧪 [HackerRank Algorithms](https://www.hackerrank.com/domains/algorithms)'
+            ]
+        },
+        systemdesign: {
+            title: 'System Design',
+            color: '#9c27b0',
+            resources: [
+                '📖 [System Design Primer](https://github.com/donnemartin/system-design-primer)',
+                '🎥 [System Design Interview](https://www.youtube.com/c/SystemDesignInterview)',
+                '📚 [High Scalability](http://highscalability.com/)',
+                '💪 [System Design Questions](https://github.com/checkcheckzz/system-design-interview)',
+                '🛠️ [AWS Architecture Center](https://aws.amazon.com/architecture/)'
+            ]
+        }
+    };
+
+    const topicData = resources[topic];
+    if (!topicData) {
+        await interaction.reply({ content: '❌ Topic not found!', ephemeral: true });
+        return;
+    }
+
+    const embed = new EmbedBuilder()
+        .setColor(topicData.color)
+        .setTitle(`🎓 ${topicData.title}`)
+        .setDescription('Here are some curated resources to help you learn:')
+        .addFields({
+            name: 'Recommended Resources',
+            value: topicData.resources.join('\n')
+        })
+        .setFooter({ text: 'Happy learning! Set a goal with /goal set' });
+
+    await interaction.reply({ embeds: [embed] });
+}
+
+// Interview Prep command handler
+async function handleInterviewCommand(interaction) {
+    const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === 'question') {
+        const type = interaction.options.getString('type') || 'technical';
+
+        const questions = {
+            technical: [
+                "Explain the difference between `let`, `const`, and `var` in JavaScript.",
+                "What is the difference between SQL and NoSQL databases?",
+                "Explain REST API principles and HTTP methods.",
+                "What is the difference between synchronous and asynchronous programming?",
+                "Explain the concept of Big O notation."
+            ],
+            behavioral: [
+                "Tell me about a challenging project you worked on.",
+                "How do you handle tight deadlines?",
+                "Describe a time when you had to learn a new technology quickly.",
+                "How do you approach debugging a complex problem?",
+                "Tell me about a time you received constructive feedback."
+            ],
+            system: [
+                "Design a URL shortening service like bit.ly",
+                "How would you design a chat application like WhatsApp?",
+                "Design a caching system for a web application.",
+                "How would you design a social media feed?",
+                "Design a file storage system like Dropbox."
+            ],
+            coding: [
+                "Write a function to reverse a linked list.",
+                "Find the two numbers in an array that sum to a target.",
+                "Implement a function to check if a string is a palindrome.",
+                "Write code to find the longest substring without repeating characters.",
+                "Implement a binary search algorithm."
+            ]
+        };
+
+        const questionList = questions[type];
+        const randomQuestion = questionList[Math.floor(Math.random() * questionList.length)];
+
+        const embed = new EmbedBuilder()
+            .setColor('#2196f3')
+            .setTitle(`🎯 ${type.charAt(0).toUpperCase() + type.slice(1)} Interview Question`)
+            .setDescription(randomQuestion)
+            .addFields(
+                {
+                    name: 'Tips', value: type === 'coding' ?
+                        '• Think out loud\n• Start with a brute force approach\n• Consider edge cases\n• Optimize if possible' :
+                        type === 'behavioral' ?
+                            '• Use the STAR method (Situation, Task, Action, Result)\n• Be specific with examples\n• Focus on your role and contributions' :
+                            '• Ask clarifying questions\n• Start with high-level design\n• Consider scalability and trade-offs'
+                }
+            )
+            .setFooter({ text: 'Take your time to think through the answer!' });
+
+        await interaction.reply({ embeds: [embed] });
+    }
+}
+
+// Progress Tracking command handler  
+async function handleProgressCommand(interaction) {
+    const subcommand = interaction.options.getSubcommand();
+    const userId = interaction.user.id;
+
+    if (subcommand === 'log') {
+        const topic = interaction.options.getString('topic');
+        const hours = interaction.options.getInteger('hours');
+        const notes = interaction.options.getString('notes') || 'No notes provided';
+
+        if (!client.progressLogs) client.progressLogs = new Collection();
+
+        const logEntry = {
+            userId,
+            topic,
+            hours,
+            notes,
+            date: new Date().toISOString().split('T')[0],
+            timestamp: new Date().toISOString()
+        };
+
+        const logKey = `${userId}_${Date.now()}`;
+        client.progressLogs.set(logKey, logEntry);
+
+        const embed = new EmbedBuilder()
+            .setColor('#4caf50')
+            .setTitle('📊 Progress Logged!')
+            .addFields(
+                { name: 'Topic', value: topic, inline: true },
+                { name: 'Hours', value: hours.toString(), inline: true },
+                { name: 'Date', value: logEntry.date, inline: true },
+                { name: 'Notes', value: notes }
+            )
+            .setFooter({ text: 'Great job! Keep up the learning momentum!' });
+
+        await interaction.reply({ embeds: [embed] });
+
+    } else if (subcommand === 'stats') {
+        if (!client.progressLogs) {
+            await interaction.reply({ content: '📊 No progress logged yet!', ephemeral: true });
+            return;
+        }
+
+        const userLogs = [...client.progressLogs.values()].filter(log => log.userId === userId);
+
+        if (userLogs.length === 0) {
+            await interaction.reply({ content: '📊 No progress logged yet!', ephemeral: true });
+            return;
+        }
+
+        const totalHours = userLogs.reduce((sum, log) => sum + log.hours, 0);
+        const topicStats = {};
+
+        userLogs.forEach(log => {
+            topicStats[log.topic] = (topicStats[log.topic] || 0) + log.hours;
+        });
+
+        const topTopics = Object.entries(topicStats)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([topic, hours]) => `${topic}: ${hours}h`)
+            .join('\n');
+
+        const embed = new EmbedBuilder()
+            .setColor('#9c27b0')
+            .setTitle('📊 Your Learning Statistics')
+            .addFields(
+                { name: 'Total Hours Logged', value: totalHours.toString(), inline: true },
+                { name: 'Sessions Logged', value: userLogs.length.toString(), inline: true },
+                { name: 'Average per Session', value: `${(totalHours / userLogs.length).toFixed(1)}h`, inline: true },
+                { name: 'Top Topics', value: topTopics || 'No data yet' }
+            )
+            .setFooter({ text: 'Keep up the great work!' });
+
+        await interaction.reply({ embeds: [embed] });
+    }
+}
+
+// Format code command handler
+async function handleFormatCommand(interaction) {
+    const code = interaction.options.getString('code');
+    const language = interaction.options.getString('language');
+
+    // Simple formatting - in production you'd use a proper formatter
+    const formattedCode = code
+        .replace(/;/g, ';\n')
+        .replace(/\{/g, '{\n  ')
+        .replace(/\}/g, '\n}')
+        .replace(/,/g, ',\n');
+
+    const embed = new EmbedBuilder()
+        .setColor('#795548')
+        .setTitle('🎨 Formatted Code')
+        .setDescription(`\`\`\`${language}\n${formattedCode}\`\`\``)
+        .setFooter({ text: 'Code formatting completed!' });
+
+    await interaction.reply({ embeds: [embed] });
 }
 
 // Welcome new members
