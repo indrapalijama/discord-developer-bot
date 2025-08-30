@@ -39,6 +39,10 @@ function loadData() {
             const goalData = JSON.parse(fs.readFileSync('./data/goals.json', 'utf8'));
             client.learningGoals = new Collection(goalData);
         }
+        if (fs.existsSync('./data/challenges.json')) {
+            const challengeData = JSON.parse(fs.readFileSync('./data/challenges.json', 'utf8'));
+            client.userChallenges = new Collection(challengeData);
+        }
     } catch (error) {
         console.log('No existing data found, starting fresh');
     }
@@ -51,10 +55,11 @@ function saveData() {
     }
     fs.writeFileSync('./data/snippets.json', JSON.stringify([...client.snippets]));
     fs.writeFileSync('./data/goals.json', JSON.stringify([...client.learningGoals]));
+    fs.writeFileSync('./data/challenges.json', JSON.stringify([...client.userChallenges]));
 }
 
 // Bot ready event
-client.once('ready', () => {
+client.once('clientReady', () => {
     console.log(`${client.user.tag} is online and ready to help you learn!`);
     loadData();
 
@@ -179,7 +184,35 @@ async function registerSlashCommands() {
             .addStringOption(option =>
                 option.setName('task')
                     .setDescription('What you\'re working on')
+                    .setRequired(false)),
+
+        new SlashCommandBuilder()
+            .setName('challenge-complete')
+            .setDescription('Mark a challenge as completed')
+            .addStringOption(option =>
+                option.setName('title')
+                    .setDescription('Challenge title (or part of it)')
+                    .setRequired(true))
+            .addStringOption(option =>
+                option.setName('solution')
+                    .setDescription('Your solution code')
                     .setRequired(false))
+            .addStringOption(option =>
+                option.setName('notes')
+                    .setDescription('Notes about your approach')
+                    .setRequired(false)),
+
+        new SlashCommandBuilder()
+            .setName('my-challenges')
+            .setDescription('View your challenge progress')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('completed')
+                    .setDescription('View completed challenges'))
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('stats')
+                    .setDescription('View your challenge statistics')),
     ];
 
     try {
@@ -218,6 +251,10 @@ client.on('interactionCreate', async interaction => {
             await handleDocsCommand(interaction);
         } else if (commandName === 'timer') {
             await handleTimerCommand(interaction);
+        } else if (commandName === 'challenge-complete') {
+            await handleChallengeCompleteCommand(interaction);
+        } else if (commandName === 'my-challenges') {
+            await handleMyChallengesCommand(interaction);
         }
     } catch (error) {
         console.error(error);
@@ -447,6 +484,22 @@ async function handleChallengeCommand(interaction) {
     ];
 
     const randomChallenge = challenges[Math.floor(Math.random() * challenges.length)];
+    const userId = interaction.user.id;
+
+    // Track that user received this challenge
+    const challengeKey = `${userId}_${randomChallenge.title}`;
+    if (!client.userChallenges.has(challengeKey)) {
+        client.userChallenges.set(challengeKey, {
+            userId,
+            title: randomChallenge.title,
+            description: randomChallenge.description,
+            difficulty: randomChallenge.difficulty,
+            tags: randomChallenge.tags,
+            assignedAt: new Date().toISOString(),
+            completed: false
+        });
+        saveData();
+    }
 
     const embed = new EmbedBuilder()
         .setColor('#ff6b6b')
@@ -457,9 +510,134 @@ async function handleChallengeCommand(interaction) {
             { name: 'Difficulty', value: randomChallenge.difficulty, inline: true },
             { name: 'Tags', value: randomChallenge.tags.join(', '), inline: true }
         )
-        .setFooter({ text: 'Good luck! Share your solution in #code-review' });
+        .setFooter({ text: 'Use /challenge-complete when done! Share your solution in #code-review' });
 
     await interaction.reply({ embeds: [embed] });
+}
+
+async function handleChallengeCompleteCommand(interaction) {
+    const userId = interaction.user.id;
+    const titleQuery = interaction.options.getString('title').toLowerCase();
+    const solution = interaction.options.getString('solution') || 'No solution provided';
+    const notes = interaction.options.getString('notes') || 'No additional notes';
+
+    // Find matching challenge
+    const userChallenges = [...client.userChallenges.entries()]
+        .filter(([key, challenge]) =>
+            challenge.userId === userId &&
+            challenge.title.toLowerCase().includes(titleQuery)
+        );
+
+    if (userChallenges.length === 0) {
+        await interaction.reply({
+            content: `❌ No challenge found matching "${titleQuery}". Try /challenge first or use the exact challenge title.`,
+            ephemeral: true
+        });
+        return;
+    }
+
+    if (userChallenges.length > 1) {
+        const matches = userChallenges.map(([key, challenge]) => challenge.title).join('\n');
+        await interaction.reply({
+            content: `❌ Multiple challenges found. Be more specific:\n${matches}`,
+            ephemeral: true
+        });
+        return;
+    }
+
+    const [challengeKey, challenge] = userChallenges[0];
+
+    if (challenge.completed) {
+        await interaction.reply({
+            content: `✅ You already completed "${challenge.title}"!`,
+            ephemeral: true
+        });
+        return;
+    }
+
+    // Mark as completed
+    challenge.completed = true;
+    challenge.completedAt = new Date().toISOString();
+    challenge.solution = solution;
+    challenge.notes = notes;
+
+    client.userChallenges.set(challengeKey, challenge);
+    saveData();
+
+    const embed = new EmbedBuilder()
+        .setColor('#00ff00')
+        .setTitle('🎉 Challenge Completed!')
+        .addFields(
+            { name: 'Challenge', value: challenge.title },
+            { name: 'Difficulty', value: challenge.difficulty, inline: true },
+            { name: 'Completed', value: new Date().toLocaleDateString(), inline: true }
+        )
+        .setFooter({ text: 'Great job! Try /challenge for another one!' });
+
+    if (solution !== 'No solution provided') {
+        embed.addFields({ name: 'Your Solution', value: `\`\`\`\n${solution.substring(0, 500)}${solution.length > 500 ? '...' : ''}\`\`\`` });
+    }
+
+    await interaction.reply({ embeds: [embed] });
+}
+
+// Add challenge progress handler
+async function handleMyChallengesCommand(interaction) {
+    const subcommand = interaction.options.getSubcommand();
+    const userId = interaction.user.id;
+
+    const userChallenges = [...client.userChallenges.values()]
+        .filter(challenge => challenge.userId === userId);
+
+    if (userChallenges.length === 0) {
+        await interaction.reply({ content: '💪 No challenges attempted yet! Use `/challenge` to get started.', ephemeral: true });
+        return;
+    }
+
+    if (subcommand === 'completed') {
+        const completedChallenges = userChallenges.filter(c => c.completed);
+
+        if (completedChallenges.length === 0) {
+            await interaction.reply({ content: '🎯 No challenges completed yet! Keep working!', ephemeral: true });
+            return;
+        }
+
+        const embed = new EmbedBuilder()
+            .setColor('#00ff00')
+            .setTitle('✅ Your Completed Challenges')
+            .setDescription(completedChallenges.map(c =>
+                `**${c.title}** (${c.difficulty}) - ${new Date(c.completedAt).toLocaleDateString()}`
+            ).join('\n'));
+
+        await interaction.reply({ embeds: [embed] });
+
+    } else if (subcommand === 'stats') {
+        const completedCount = userChallenges.filter(c => c.completed).length;
+        const pendingCount = userChallenges.filter(c => !c.completed).length;
+
+        const difficultyStats = {};
+        userChallenges.filter(c => c.completed).forEach(c => {
+            difficultyStats[c.difficulty] = (difficultyStats[c.difficulty] || 0) + 1;
+        });
+
+        const embed = new EmbedBuilder()
+            .setColor('#9c27b0')
+            .setTitle('📊 Your Challenge Statistics')
+            .addFields(
+                { name: 'Completed', value: completedCount.toString(), inline: true },
+                { name: 'Pending', value: pendingCount.toString(), inline: true },
+                { name: 'Success Rate', value: `${Math.round((completedCount / userChallenges.length) * 100)}%`, inline: true }
+            );
+
+        if (Object.keys(difficultyStats).length > 0) {
+            const difficultyBreakdown = Object.entries(difficultyStats)
+                .map(([difficulty, count]) => `${difficulty}: ${count}`)
+                .join('\n');
+            embed.addFields({ name: 'By Difficulty', value: difficultyBreakdown });
+        }
+
+        await interaction.reply({ embeds: [embed] });
+    }
 }
 
 // Documentation search handler
